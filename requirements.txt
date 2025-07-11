@@ -1,2 +1,10 @@
-psutil>=5.9.0
-PyYAML>=6.0
+# OS Info Tool Requirements
+# No external dependencies required for basic functionality
+# Optional dependencies for enhanced features:
+
+# For YAML output format (optional)
+# PyYAML>=6.0
+
+# For development and testing
+# pytest>=7.0.0
+# pytest-cov>=4.0.0

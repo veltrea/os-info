@@ -1,40 +1,96 @@
 #!/usr/bin/env python3
+"""
+OS Information Collection Tool
 
-import argparse
+A comprehensive tool for collecting and displaying system information
+including operating system details, network configuration, and user information.
+
+Usage:
+    python os-info.py [options]
+
+Options:
+    --format FORMAT    Output format: json, yaml, csv, minimal (default: json)
+    --pretty          Pretty print JSON output
+    --minimal         Use minimal output format
+    --help           Show this help message
+
+Examples:
+    python os-info.py
+    python os-info.py --format yaml
+    python os-info.py --format json --pretty
+    python os-info.py --minimal
+"""
+
 import sys
-from os_info.collector import collect_all
-from os_info.formatter import format_output
+import argparse
+from os_info.collector import OSInfoCollector
+from os_info.formatter import OSInfoFormatter
+
 
 def main():
-    parser = argparse.ArgumentParser(description='システム情報収集ツール')
-    parser.add_argument('--format', choices=['json', 'csv', 'yaml'], default='json',
-                        help='出力形式を指定（デフォルト: json）')
-    parser.add_argument('--output', type=str, help='出力ファイルを指定（デフォルト: 標準出力）')
-    parser.add_argument('--pretty', action='store_true', help='整形された出力（JSON/YAML形式の場合）')
-    parser.add_argument('--minimal', action='store_true', help='最小限の情報のみ出力')
-    parser.add_argument('--no-timestamps', action='store_true', help='タイムスタンプを含めない')
-    parser.add_argument('--utf8', action='store_true', help='UTF-8エンコーディングを強制')
-    parser.add_argument('--quiet', action='store_true', help='警告メッセージを抑制')
-
+    """Main function"""
+    parser = argparse.ArgumentParser(
+        description='Collect and display OS information',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s                    # JSON output
+  %(prog)s --format yaml      # YAML output
+  %(prog)s --format csv       # CSV output
+  %(prog)s --minimal          # Minimal output
+  %(prog)s --pretty           # Pretty JSON output
+"""
+    )
+    
+    parser.add_argument(
+        '--format',
+        choices=['json', 'yaml', 'csv', 'minimal'],
+        default='json',
+        help='Output format (default: json)'
+    )
+    
+    parser.add_argument(
+        '--pretty',
+        action='store_true',
+        help='Pretty print JSON output'
+    )
+    
+    parser.add_argument(
+        '--minimal',
+        action='store_true',
+        help='Use minimal output format (overrides --format)'
+    )
+    
     args = parser.parse_args()
-
+    
     try:
-        data = collect_all(minimal=args.minimal, no_timestamps=args.no_timestamps)
-        output = format_output(data, args.format, pretty=args.pretty)
-
-        if args.output:
-            encoding = 'utf-8' if args.utf8 else None
-            with open(args.output, 'w', encoding=encoding) as f:
-                f.write(output)
+        # Collect information
+        collector = OSInfoCollector()
+        data = collector.collect_all()
+        
+        # Format output
+        formatter = OSInfoFormatter(data)
+        
+        if args.minimal:
+            output = formatter.to_minimal()
+        elif args.format == 'json':
+            output = formatter.to_json(pretty=args.pretty)
+        elif args.format == 'yaml':
+            output = formatter.to_yaml()
+        elif args.format == 'csv':
+            output = formatter.to_csv()
         else:
-            if args.utf8:
-                sys.stdout.reconfigure(encoding='utf-8')
-            print(output)
-
-    except Exception as e:
-        if not args.quiet:
-            print(f'エラー: {str(e)}', file=sys.stderr)
+            output = formatter.to_json()
+        
+        print(output)
+        
+    except KeyboardInterrupt:
+        print("\nOperation cancelled by user.", file=sys.stderr)
         sys.exit(1)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
 
 if __name__ == '__main__':
     main()

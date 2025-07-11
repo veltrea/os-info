@@ -1,52 +1,78 @@
 #!/usr/bin/env python3
+"""
+OS Information Formatter Module
+
+This module provides functionality to format collected system information
+in various output formats including JSON, YAML, and CSV.
+"""
 
 import json
 import csv
-import yaml
-from io import StringIO
+import io
+from typing import Dict, Any, List
 
-def to_json(data, pretty=False):
-    if pretty:
-        return json.dumps(data, indent=2, ensure_ascii=False)
-    return json.dumps(data)
 
-def to_csv(data):
-    output = StringIO()
-    writer = csv.writer(output)
+class OSInfoFormatter:
+    """Formats OS information in various formats"""
     
-    def flatten_dict(d, prefix=''):
-        items = []
-        for k, v in d.items():
-            new_key = f'{prefix}{k}' if prefix else k
-            if isinstance(v, dict):
-                items.extend(flatten_dict(v, f'{new_key}.'))
-            elif isinstance(v, list):
-                for i, item in enumerate(v):
-                    if isinstance(item, dict):
-                        items.extend(flatten_dict(item, f'{new_key}[{i}].'))
-                    else:
-                        items.append((f'{new_key}[{i}]', str(item)))
+    def __init__(self, data: Dict[str, Any]):
+        self.data = data
+    
+    def to_json(self, pretty: bool = False) -> str:
+        """Format data as JSON"""
+        if pretty:
+            return json.dumps(self.data, indent=2, ensure_ascii=False)
+        return json.dumps(self.data, ensure_ascii=False)
+    
+    def to_yaml(self) -> str:
+        """Format data as YAML"""
+        try:
+            import yaml
+            return yaml.dump(self.data, default_flow_style=False, allow_unicode=True)
+        except ImportError:
+            return "YAML library not available. Install with: pip install PyYAML"
+    
+    def to_csv(self) -> str:
+        """Format data as CSV"""
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow(['Category', 'Key', 'Value'])
+        
+        # Flatten the data
+        for category, category_data in self.data.items():
+            if isinstance(category_data, dict):
+                for key, value in category_data.items():
+                    if isinstance(value, (dict, list)):
+                        value = json.dumps(value, ensure_ascii=False)
+                    writer.writerow([category, key, str(value)])
             else:
-                items.append((new_key, str(v)))
-        return items
+                writer.writerow([category, '', str(category_data)])
+        
+        return output.getvalue()
     
-    flattened = flatten_dict(data)
-    writer.writerow(['Key', 'Value'])
-    writer.writerows(flattened)
-    
-    return output.getvalue()
-
-def to_yaml(data):
-    return yaml.dump(data, allow_unicode=True)
-
-def format_output(data, format_type, pretty=False):
-    formats = {
-        'json': lambda: to_json(data, pretty),
-        'csv': lambda: to_csv(data),
-        'yaml': lambda: to_yaml(data)
-    }
-    
-    if format_type not in formats:
-        raise ValueError(f'未対応の出力形式: {format_type}')
-    
-    return formats[format_type]()
+    def to_minimal(self) -> str:
+        """Format data in minimal format"""
+        lines = []
+        
+        # System info
+        if 'system' in self.data and isinstance(self.data['system'], dict):
+            system = self.data['system']
+            lines.append(f"OS: {system.get('system', 'Unknown')} {system.get('release', '')}")
+            lines.append(f"Machine: {system.get('machine', 'Unknown')}")
+            lines.append(f"Processor: {system.get('processor', 'Unknown')}")
+        
+        # Network info
+        if 'network' in self.data and isinstance(self.data['network'], dict):
+            network = self.data['network']
+            lines.append(f"Hostname: {network.get('hostname', 'Unknown')}")
+            lines.append(f"Local IP: {network.get('local_ip', 'Unknown')}")
+        
+        # User info
+        if 'user' in self.data and isinstance(self.data['user'], dict):
+            user = self.data['user']
+            lines.append(f"User: {user.get('username', 'Unknown')}")
+            lines.append(f"Home: {user.get('home_directory', 'Unknown')}")
+        
+        return '\n'.join(lines)

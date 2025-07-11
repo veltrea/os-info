@@ -1,71 +1,120 @@
 #!/usr/bin/env python3
+"""
+OS Information Collector Module
 
+This module provides functionality to collect system information including:
+- Operating system details
+- Network configuration
+- User information
+"""
+
+import os
 import platform
 import socket
-import psutil
-from datetime import datetime
+import getpass
+import subprocess
+import json
+from typing import Dict, List, Any, Optional
 
-def get_system_info(no_timestamps=False):
-    info = {
-        'os_name': platform.system(),
-        'version': platform.version(),
-        'build_number': platform.release(),
-        'architecture': platform.machine()
-    }
-    
-    if not no_timestamps:
-        info.update({
-            'install_date': psutil.boot_time(),
-            'last_boot_time': psutil.boot_time()
-        })
-    
-    return info
 
-def get_network_info():
-    hostname = socket.gethostname()
-    interfaces = []
+class OSInfoCollector:
+    """Collects various system information"""
     
-    for iface, addrs in psutil.net_if_addrs().items():
-        for addr in addrs:
-            if addr.family == socket.AF_INET:
-                interfaces.append({
-                    'name': iface,
-                    'ip_address': addr.address,
-                    'mac_address': next((a.address for a in addrs if a.family == psutil.AF_LINK), None)
-                })
-                break
+    def __init__(self):
+        self.info = {}
     
-    return {
-        'hostname': hostname,
-        'interfaces': interfaces
-    }
-
-def get_user_info():
-    return {
-        'current_user': psutil.Process().username(),
-        'all_users': [u.name for u in psutil.users()]
-    }
-
-def collect_all(minimal=False, no_timestamps=False):
-    data = {
-        'system': get_system_info(no_timestamps),
-        'network': get_network_info(),
-        'users': get_user_info()
-    }
-    
-    if minimal:
-        if 'system' in data:
-            data['system'] = {
-                'os_name': data['system']['os_name'],
-                'version': data['system']['version']
+    def collect_system_info(self) -> Dict[str, Any]:
+        """Collect basic system information"""
+        try:
+            system_info = {
+                'platform': platform.platform(),
+                'system': platform.system(),
+                'node': platform.node(),
+                'release': platform.release(),
+                'version': platform.version(),
+                'machine': platform.machine(),
+                'processor': platform.processor(),
+                'architecture': platform.architecture(),
+                'python_version': platform.python_version(),
+                'python_implementation': platform.python_implementation(),
             }
-        if 'network' in data:
-            data['network'] = {
-                'hostname': data['network']['hostname']
-            }
-        if 'users' in data:
-            data['users'] = {
-                'current_user': data['users']['current_user']
-            }
+            
+            # Add Windows-specific information
+            if platform.system() == 'Windows':
+                try:
+                    import winreg
+                    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, 
+                                      r"SOFTWARE\Microsoft\Windows NT\CurrentVersion") as key:
+                        system_info['windows_build'] = winreg.QueryValueEx(key, "CurrentBuild")[0]
+                        system_info['windows_version'] = winreg.QueryValueEx(key, "DisplayVersion")[0]
+                except Exception:
+                    pass
+            
+            return system_info
+        except Exception as e:
+            return {'error': str(e)}
     
-    return data
+    def collect_network_info(self) -> Dict[str, Any]:
+        """Collect network information"""
+        try:
+            network_info = {
+                'hostname': socket.gethostname(),
+                'fqdn': socket.getfqdn(),
+            }
+            
+            # Get IP addresses
+            try:
+                # Get local IP address
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.connect(("8.8.8.8", 80))
+                network_info['local_ip'] = s.getsockname()[0]
+                s.close()
+            except Exception:
+                network_info['local_ip'] = 'Unable to determine'
+            
+            # Get all network interfaces (Windows)
+            if platform.system() == 'Windows':
+                try:
+                    result = subprocess.run(['ipconfig', '/all'], 
+                                          capture_output=True, text=True, encoding='cp932')
+                    if result.returncode == 0:
+                        network_info['ipconfig_output'] = result.stdout
+                except Exception:
+                    pass
+            
+            return network_info
+        except Exception as e:
+            return {'error': str(e)}
+    
+    def collect_user_info(self) -> Dict[str, Any]:
+        """Collect user information"""
+        try:
+            user_info = {
+                'username': getpass.getuser(),
+                'home_directory': os.path.expanduser('~'),
+                'current_directory': os.getcwd(),
+            }
+            
+            # Add environment variables
+            env_vars = ['PATH', 'USERPROFILE', 'COMPUTERNAME', 'USERDOMAIN']
+            user_info['environment'] = {}
+            for var in env_vars:
+                user_info['environment'][var] = os.environ.get(var, 'Not set')
+            
+            return user_info
+        except Exception as e:
+            return {'error': str(e)}
+    
+    def collect_all(self) -> Dict[str, Any]:
+        """Collect all available information"""
+        return {
+            'system': self.collect_system_info(),
+            'network': self.collect_network_info(),
+            'user': self.collect_user_info(),
+            'timestamp': self._get_timestamp()
+        }
+    
+    def _get_timestamp(self) -> str:
+        """Get current timestamp"""
+        from datetime import datetime
+        return datetime.now().isoformat()
