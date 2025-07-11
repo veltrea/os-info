@@ -1,55 +1,84 @@
-# OS情報収集ツール
+# OS Information Collection Tool (os-info)
 
-システム情報（OS、ネットワーク、ユーザー）を収集するPythonツールです。
+A Python tool that collects operating system information and outputs it in various formats.
 
-## 機能
+## Requirements
 
-- システム情報の収集（OS名、バージョン、ビルド番号など）
-- ネットワーク情報の収集（ホスト名、インターフェース、IPアドレスなど）
-- ユーザー情報の収集（現在のユーザー、システムユーザー一覧）
-- 複数の出力形式対応（JSON、CSV、YAML）
+### Running from Source
+- Python 3.7 or higher
+- Windows OS
 
-## 使用方法
+### Executable (exe)
+- Windows OS
 
-```bash
-# 基本的な使用方法（JSON形式で出力）
-python os-info.py
+## Installation
 
-# CSV形式で出力
-python os-info.py --format csv
+```cmd
+# Install using pip
+pip install os-info
 
-# YAML形式でファイルに出力
-python os-info.py --format yaml --output info.yaml
-
-# 整形されたJSON形式で出力
-python os-info.py --pretty
-
-# 最小限の情報のみ出力
-python os-info.py --minimal
+# Or install from source
+git clone https://github.com/veltrea/os-info.git
+cd os-info
+pip install .
 ```
 
-## オプション
+## Usage
 
-- `--format {json,csv,yaml}` : 出力形式を指定（デフォルト: json）
-- `--output FILE` : 出力ファイルを指定（デフォルト: 標準出力）
-- `--pretty` : 整形された出力（JSON/YAML形式の場合）
-- `--minimal` : 最小限の情報のみ出力
-- `--no-timestamps` : タイムスタンプを含めない
-- `--utf8` : UTF-8エンコーディングを強制
-- `--quiet` : 警告メッセージを抑制
+```cmd
+# Display to standard output
+os-info
 
-## インストール
+# Output to file
+os-info --output os.json
+os-info --utf8
+```
 
-1. Python 3.7以上をインストール
-2. 必要なパッケージをインストール：
-   ```bash
-   pip install -r requirements.txt
-   ```
-   または
-   ```bash
-   pip install psutil>=5.9.0 PyYAML>=6.0
-   ```
+## Collected Information
 
-## ライセンス
+- OS name
+- Version
+- Build number
+- Architecture
+- Installation date
+- Last boot time
+- Logged-in user
+- Hostname
+- IP address
+- MAC address
+- User accounts
+  - Username
+  - User ID
+  - Home directory
+  - Service account
+
+## Command Line Options
+
+### Output Format
+- `--format json|csv|yaml`: Output format (default: json)
+- `--pretty`: Pretty print JSON output
+- `--minimal`: Minimal information only
+
+### Output Control
+- `--output FILE`: Output to file
+- `--no-timestamps`: Exclude timestamps
+
+### Others
+- `--quiet`: Suppress output except errors
+- `--help`: Display help
+
+## Exit Codes
+
+- 0: Success
+- 1: General error
+- 2: Insufficient permissions
+- 4: Partial success (some data collection failed)
+
+## License
 
 MIT
+
+## Contributing
+
+Please submit bug reports and feature requests to the [Issue Tracker](https://github.com/veltrea/os-info/issues).
+Pull requests are welcome.
